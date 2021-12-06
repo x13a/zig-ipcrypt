@@ -33,30 +33,38 @@ fn xor4(dst: *[4]u8, a: *const [4]u8, b: *const [4]u8) void {
     }
 }
 
-pub fn encrypt(key: *const [16]u8, ip: Ip4Address) Ip4Address {
-    const bytes = @ptrCast(*const [4]u8, &ip.sa.addr);
+pub fn encrypt_raw(key: *const [16]u8, ip: *const [4]u8) [4]u8 {
     var out: [4]u8 = undefined;
-    xor4(&out, bytes, key[0..4]);
+    xor4(&out, ip, key[0..4]);
     permuteFwd(&out);
     xor4(&out, &out, key[4..8]);
     permuteFwd(&out);
     xor4(&out, &out, key[8..12]);
     permuteFwd(&out);
     xor4(&out, &out, key[12..16]);
-    return Ip4Address.init(out, 0);
+    return out;
 }
 
-pub fn decrypt(key: *const [16]u8, ip: Ip4Address) Ip4Address {
-    const bytes = @ptrCast(*const [4]u8, &ip.sa.addr);
+pub fn decrypt_raw(key: *const [16]u8, ip: *const [4]u8) [4]u8 {
     var out: [4]u8 = undefined;
-    xor4(&out, bytes, key[12..16]);
+    xor4(&out, ip, key[12..16]);
     permuteBwd(&out);
     xor4(&out, &out, key[8..12]);
     permuteBwd(&out);
     xor4(&out, &out, key[4..8]);
     permuteBwd(&out);
     xor4(&out, &out, key[0..4]);
-    return Ip4Address.init(out, 0);
+    return out;
+}
+
+pub fn encrypt(key: *const [16]u8, ip: Ip4Address) Ip4Address {
+    const raw_ip = @ptrCast(*const [4]u8, &ip.sa.addr);
+    return Ip4Address.init(encrypt_raw(key, raw_ip), 0);
+}
+
+pub fn decrypt(key: *const [16]u8, ip: Ip4Address) Ip4Address {
+    const raw_ip = @ptrCast(*const [4]u8, &ip.sa.addr);
+    return Ip4Address.init(decrypt_raw(key, raw_ip), 0);
 }
 
 test "ipcrypt" {
